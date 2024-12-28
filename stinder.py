@@ -154,6 +154,19 @@ user_input = st.text_input("Enter a game name to get recommendations:")
 if "excluded_games" not in st.session_state:
     st.session_state["excluded_games"] = []
 
+# Inicializar índice de recomendaciones por búsqueda
+if "current_index" not in st.session_state:
+    st.session_state["current_index"] = 0
+
+if "last_search" not in st.session_state:
+    st.session_state["last_search"] = ""
+
+# Resetear el estado si la búsqueda cambia
+if user_input != st.session_state["last_search"]:
+    st.session_state["current_index"] = 0
+    st.session_state["excluded_games"] = []
+    st.session_state["last_search"] = user_input
+
 # Mostrar sugerencias mientras el usuario escribe
 if user_input:
     matching_games = data[data["name"].str.contains(user_input, case=False, na=False)]
@@ -169,9 +182,6 @@ if user_input:
     recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
 
     if not recommendations.empty:
-        if "current_index" not in st.session_state:
-            st.session_state["current_index"] = 0
-
         current_index = st.session_state["current_index"]
         if current_index < len(recommendations):
             game = recommendations.iloc[current_index]
