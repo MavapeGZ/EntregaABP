@@ -1,0 +1,487 @@
+{
+    "fútbol": [
+        "soccer",
+        "sports",
+        "football"
+    ],
+    "coches": [
+        "cars",
+        "racing",
+        "vehicles"
+    ],
+    "acción": [
+        "action",
+        "adventure",
+        "combat"
+    ],
+    "estrategia": [
+        "strategy",
+        "tactics",
+        "planning"
+    ],
+    "fantasía": [
+        "fantasy",
+        "magic",
+        "mythical"
+    ],
+    "rol": [
+        "role-playing",
+        "rpg",
+        "character development"
+    ],
+    "simulación": [
+        "simulation",
+        "realistic",
+        "management"
+    ],
+    "terror": [
+        "horror",
+        "scary",
+        "thriller"
+    ],
+    "puzzle": [
+        "puzzle",
+        "brain-teaser",
+        "logic"
+    ],
+    "shooter": [
+        "fps",
+        "first-person shooter",
+        "gunplay"
+    ],
+    "música": [
+        "music",
+        "rhythm",
+        "dance"
+    ],
+    "aventura": [
+        "adventure",
+        "exploration",
+        "journey"
+    ],
+    "deportes": [
+        "sports",
+        "athletics",
+        "competition"
+    ],
+    "multijugador": [
+        "multiplayer",
+        "coop",
+        "online"
+    ],
+    "sandbox": [
+        "sandbox",
+        "open-world",
+        "freeform"
+    ],
+    "conducción": [
+        "driving",
+        "racing",
+        "vehicles"
+    ],
+    "survival": [
+        "survival",
+        "crafting",
+        "hardcore"
+    ],
+    "zombies": [
+        "zombies",
+        "undead",
+        "apocalypse"
+    ],
+    "ciencia ficción": [
+        "sci-fi",
+        "space",
+        "future"
+    ],
+    "plataformas": [
+        "platformer",
+        "jump",
+        "arcade"
+    ],
+    "indie": [
+        "indie",
+        "independent",
+        "small studio"
+    ],
+    "guerra": [
+        "war",
+        "battle",
+        "combat"
+    ],
+    "historia": [
+        "story-driven",
+        "narrative",
+        "plot"
+    ],
+    "arcade": [
+        "arcade",
+        "retro",
+        "classic"
+    ],
+    "realidad virtual": [
+        "vr",
+        "virtual reality",
+        "immersive"
+    ],
+    "anime": [
+        "anime",
+        "manga",
+        "japan"
+    ],
+    "pixel art": [
+        "pixel art",
+        "retro",
+        "8-bit"
+    ],
+    "medieval": [
+        "medieval",
+        "knights",
+        "castles"
+    ],
+    "exploración": [
+        "exploration",
+        "adventure",
+        "discovery"
+    ],
+    "supervivencia": [
+        "survival",
+        "hardcore",
+        "challenging"
+    ],
+    "carreras": [
+        "racing",
+        "speed",
+        "vehicles"
+    ],
+    "misterio": [
+        "mystery",
+        "detective",
+        "investigation"
+    ],
+    "niños": [
+        "kids",
+        "family-friendly",
+        "educational"
+    ],
+    "estrategia en tiempo real": [
+        "rts",
+        "real-time strategy",
+        "tactics"
+    ],
+    "turnos": [
+        "turn-based",
+        "strategy",
+        "tactics"
+    ],
+    "cartas": [
+        "cards",
+        "deck-building",
+        "strategy"
+    ],
+    "animales": [
+        "animals",
+        "pets",
+        "nature"
+    ],
+    "construcción": [
+        "building",
+        "construction",
+        "management"
+    ],
+    "gestión": [
+        "management",
+        "simulation",
+        "economy"
+    ],
+    "hack and slash": [
+        "hack and slash",
+        "combat",
+        "fast-paced"
+    ],
+    "roguelike": [
+        "roguelike",
+        "procedural",
+        "permadeath"
+    ],
+    "steampunk": [
+        "steampunk",
+        "industrial",
+        "retro-futuristic"
+    ],
+    "western": [
+        "western",
+        "cowboys",
+        "wild west"
+    ],
+    "pintura": [
+        "art",
+        "painting",
+        "creativity"
+    ],
+    "héroes": [
+        "heroes",
+        "superheroes",
+        "justice"
+    ],
+    "metroidvania": [
+        "metroidvania",
+        "exploration",
+        "platformer"
+    ],
+    "naves espaciales": [
+        "spaceships",
+        "space",
+        "sci-fi"
+    ],
+    "cómics": [
+        "comics",
+        "superheroes",
+        "graphic novels"
+    ],
+    "educativo": [
+        "educational",
+        "learning",
+        "kids"
+    ],
+    "cocina": [
+        "cooking",
+        "food",
+        "simulation"
+    ],
+    "piratas": [
+        "pirates",
+        "ships",
+        "treasure"
+    ],
+    "mitología": [
+        "mythology",
+        "gods",
+        "legends"
+    ],
+    "caza": [
+        "hunting",
+        "wildlife",
+        "tracking"
+    ],
+    "magia": [
+        "magic",
+        "fantasy",
+        "spells"
+    ],
+    "robots": [
+        "robots",
+        "mechs",
+        "ai"
+    ],
+    "viajes": [
+        "travel",
+        "journey",
+        "exploration"
+    ],
+    "humor": [
+        "humor",
+        "funny",
+        "comedy"
+    ],
+    "espionaje": [
+        "espionage",
+        "stealth",
+        "spy"
+    ],
+    "realismo": [
+        "realistic",
+        "simulation",
+        "authentic"
+    ],
+    "dinosaurios": [
+        "dinosaurs",
+        "prehistoric",
+        "extinction"
+    ],
+    "monstruos": [
+        "monsters",
+        "creatures",
+        "horror"
+    ],
+    "hackeo": [
+        "hacking",
+        "cybersecurity",
+        "cyberpunk"
+    ],
+    "cyberpunk": [
+        "cyberpunk",
+        "futuristic",
+        "dystopia"
+    ],
+    "stealth": [
+        "stealth",
+        "sneaky",
+        "espionage"
+    ],
+    "battle royale": [
+        "battle royale",
+        "last man standing",
+        "multiplayer"
+    ],
+    "parkour": [
+        "parkour",
+        "movement",
+        "free running"
+    ],
+    "cómic": [
+        "comic",
+        "graphic novel",
+        "superhero"
+    ],
+    "ingeniería": [
+        "engineering",
+        "machines",
+        "construction"
+    ],
+    "arte": [
+        "art",
+        "creativity",
+        "expression"
+    ],
+    "paz": [
+        "peaceful",
+        "relaxing",
+        "calm"
+    ],
+    "diseño": [
+        "design",
+        "creation",
+        "innovation"
+    ],
+    "competencia": [
+        "competition",
+        "challenge",
+        "rivalry"
+    ],
+    "fiesta": [
+        "party",
+        "fun",
+        "multiplayer"
+    ],
+    "futurista": [
+        "futuristic",
+        "sci-fi",
+        "advanced"
+    ],
+    "drones": [
+        "drones",
+        "flying",
+        "technology"
+    ],
+    "galaxias": [
+        "galaxies",
+        "space",
+        "cosmos"
+    ],
+    "mar": [
+        "sea",
+        "ocean",
+        "water"
+    ],
+    "pesca": [
+        "fishing",
+        "water",
+        "outdoors"
+    ],
+    "animación": [
+        "animation",
+        "cartoon",
+        "animated"
+    ],
+    "mitos": [
+        "myths",
+        "legends",
+        "folklore"
+    ],
+    "desafíos": [
+        "challenges",
+        "hardcore",
+        "tests"
+    ],
+    "narrativa": [
+        "narrative",
+        "story",
+        "plot"
+    ],
+    "espacio": [
+        "space",
+        "cosmos",
+        "galaxy"
+    ],
+    "vehículos": [
+        "vehicles",
+        "cars",
+        "transport"
+    ],
+    "viajes en el tiempo": [
+        "time travel",
+        "future",
+        "past"
+    ],
+    "experimentos": [
+        "experiments",
+        "science",
+        "labs"
+    ],
+    "cultivo": [
+        "farming",
+        "harvest",
+        "agriculture"
+    ],
+    "superhéroes": [
+        "superheroes",
+        "justice",
+        "powers"
+    ],
+    "dibujo": [
+        "drawing",
+        "art",
+        "creativity"
+    ],
+    "villanos": [
+        "villains",
+        "enemies",
+        "antagonists"
+    ],
+    "niños pequeños": [
+        "toddlers",
+        "kids",
+        "family"
+    ],
+    "policías": [
+        "police",
+        "crime",
+        "law enforcement"
+    ],
+    "hospital": [
+        "hospital",
+        "medicine",
+        "health"
+    ],
+    "música clásica": [
+        "classical music",
+        "orchestra",
+        "piano"
+    ],
+    "tiempo real": [
+        "real-time",
+        "instant",
+        "live"
+    ],
+    "mundo abierto": [
+        "open-world",
+        "sandbox",
+        "exploration"
+    ],
+    "creación": [
+        "creation",
+        "building",
+        "design"
+    ]
+}
