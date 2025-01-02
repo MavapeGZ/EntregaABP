@@ -6,6 +6,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 import deepl
 from textblob import TextBlob
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+import json
 
 # Set page configuration with custom title and favicon
 st.set_page_config(
@@ -22,15 +24,40 @@ def load_data():
 
 data = load_data()
 
+# Cargar expansiones de consultas desde un archivo JSON
+@st.cache_data
+def load_query_expansions(file_path="./data/dictionary/synonym_dictionary.json"):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+QUERY_EXPANSIONS = load_query_expansions()
+
+def expand_query(query):
+    words = query.lower().split()
+    expanded = []
+    for word in words:
+        expanded.append(word)
+        if word in QUERY_EXPANSIONS:
+            expanded.extend(QUERY_EXPANSIONS[word])
+    return " ".join(set(expanded))
+
 # Procesar texto con TfidfVectorizer
 @st.cache_resource
 def process_text(data):
     tfidf = TfidfVectorizer(stop_words="english")
-    data["processed_text"] = data["detailed_description"].fillna("")
+    # Combinar el nombre del juego, su descripción y las etiquetas para procesar el texto
+    tag_columns = data.columns[6:]  # Asumimos que las etiquetas comienzan desde la columna 6
+    data["tags_combined"] = data[tag_columns].fillna(0).astype(str).apply(" ".join, axis=1)
+    data["processed_text"] = (data["name"] + " " + data["detailed_description"] + " " + data["tags_combined"]).fillna("")
     tfidf_matrix = tfidf.fit_transform(data["processed_text"])
     return tfidf, tfidf_matrix
 
 tfidf, tfidf_matrix = process_text(data)
+
+# Crear el directorio feedback si no existe
+feedback_dir = "./feedback"
+if not os.path.exists(feedback_dir):
+    os.makedirs(feedback_dir)
 
 # Crear archivo feedback si no existe
 feedback_file = "./feedback/feedback.csv"
@@ -78,20 +105,26 @@ def process_text_feedback(game_name, text_feedback):
     if sentiment != "unknown":
         update_feedback(game_name, sentiment)
 
-# Función para obtener recomendaciones basadas en similitud
-# Modifica las recomendaciones utilizando feedback de usuarios
-def get_recommendations(game_name, tfidf_matrix, data):
+# Función para obtener recomendaciones basadas en similitud por nombre o descripción
+def get_recommendations(query, tfidf_matrix, data, by_description=False):
     feedback_data = pd.read_csv(feedback_file)
-    idx = data[data["name"].str.contains(game_name, case=False, na=False)].index
-    if len(idx) == 0:
-        return pd.DataFrame()
-    idx = idx[0]
-    cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-    similar_indices = cosine_sim.argsort()[-50:][::-1]  # Asegurarse de tener suficientes recomendaciones iniciales
+
+    if by_description:
+        expanded_query = expand_query(query)
+        query_vector = tfidf.transform([expanded_query])
+        cosine_sim = linear_kernel(query_vector, tfidf_matrix).flatten()
+    else:
+        idx = data[data["name"].str.contains(query, case=False, na=False)].index
+        if len(idx) == 0:
+            return pd.DataFrame()
+        idx = idx[0]
+        cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
+
+    similar_indices = cosine_sim.argsort()[-50:][::-1]
 
     # Crear un DataFrame de recomendaciones con puntaje ajustado
     recommendations = data.iloc[similar_indices].copy()
-    recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)  # Eliminar duplicados
+    recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
     recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
 
     # Ajustar el puntaje usando feedback
@@ -100,12 +133,15 @@ def get_recommendations(game_name, tfidf_matrix, data):
         likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
         dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
         feedback_score = likes - dislikes
-        recommendations.at[i, "adjusted_score"] += feedback_score * 0.1  # Peso de feedback ajustable
+        recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
 
     # Ordenar por puntaje ajustado
     recommendations = recommendations.sort_values(by="adjusted_score", ascending=False)
 
-    # Asegurarse de devolver exactamente 10 recomendaciones
+    # Excluir el juego original de las recomendaciones
+    if "name" in recommendations.columns:
+        recommendations = recommendations[recommendations["name"] != query]
+
     return recommendations.head(10)
 
 # Configurar la interfaz
@@ -147,8 +183,13 @@ with colii:
 
 st.markdown("<h1 style='text-align: center; margin-left: 15px;'>Stinder</h1>", unsafe_allow_html=True)
 
-# Input para buscar un juego
-user_input = st.text_input("Enter a game name to get recommendations:")
+# Inputs para buscar un juego por nombre o descripción
+user_input_name = st.text_input("Enter a game name to get recommendations:")
+user_input_description = st.text_area("Enter a description to get recommendations:")
+
+# Priorizar búsqueda por nombre si ambos están llenos
+search_by_name = bool(user_input_name.strip()) and not bool(user_input_description.strip())
+search_by_description = bool(user_input_description.strip()) and not bool(user_input_name.strip())
 
 # Inicializar lista de exclusión en la sesión
 if "excluded_games" not in st.session_state:
@@ -162,24 +203,30 @@ if "last_search" not in st.session_state:
     st.session_state["last_search"] = ""
 
 # Resetear el estado si la búsqueda cambia
-if user_input != st.session_state["last_search"]:
+current_search = user_input_name if search_by_name else user_input_description
+if current_search != st.session_state["last_search"]:
     st.session_state["current_index"] = 0
     st.session_state["excluded_games"] = []
-    st.session_state["last_search"] = user_input
+    st.session_state["last_search"] = current_search
 
-# Mostrar sugerencias mientras el usuario escribe
-if user_input:
-    matching_games = data[data["name"].str.contains(user_input, case=False, na=False)]
+# Mostrar sugerencias mientras el usuario escribe si busca por nombre
+if search_by_name and user_input_name:
+    matching_games = data[data["name"].str.contains(user_input_name, case=False, na=False)]
     matching_game_names = matching_games["name"].tolist()
 
     if matching_game_names:
         selected_game = st.selectbox("Did you mean:", matching_game_names, key="game_selector")
-        user_input = selected_game if selected_game else user_input
+        current_search = selected_game if selected_game else user_input_name
+    #else:
+    #   st.write("No games found matching your search. Please try a different name.")
 
-    recommendations = get_recommendations(user_input, tfidf_matrix, data)
+# Mostrar recomendaciones
+if current_search:
+    recommendations = get_recommendations(current_search, tfidf_matrix, data, by_description=search_by_description)
 
     # Filtrar juegos en la lista de exclusión
-    recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
+    if "name" in recommendations.columns:
+        recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
 
     if not recommendations.empty:
         current_index = st.session_state["current_index"]
@@ -233,4 +280,4 @@ if user_input:
         else:
             st.write("No more recommendations. Try a different search.")
     else:
-        st.write("No games found. Try a different search.")
+        st.write("No games found matching your search. Please try a different name.")
