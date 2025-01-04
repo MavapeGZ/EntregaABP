@@ -70,8 +70,10 @@ def update_feedback(game_name, feedback_type):
     feedback_data = pd.read_csv(feedback_file)
     
     # Obtener el appid correspondiente al juego
-    appid = data[data["name"] == game_name]["appid"].iloc[0] if not data[data["name"] == game_name].empty else None
-    if appid is None:
+    appid_series = data[data["name"] == game_name]["appid"]
+    if not appid_series.empty:
+        appid = appid_series.iloc[0]
+    else:
         return
 
     # Buscar si ya existe la fila correspondiente
@@ -106,22 +108,23 @@ def process_text_feedback(game_name, text_feedback):
     if sentiment != "unknown":
         update_feedback(game_name, sentiment)
 
-
-
 @st.cache_data
 def process_user_csvs(uploaded_files, base_data):
     user_data = pd.DataFrame()
 
     for file in uploaded_files:
         try:
-            # Leer el archivo y detectar estructura
+            # Leer el archivo sin encabezados inicialmente
             df = pd.read_csv(file, header=None)
 
-            # Detectar estructura específica de columnas
-            if df.iloc[0, 0] == "appid":  # Archivo con encabezados
-                df = pd.read_csv(file)  # Leer nuevamente con encabezados
-            else:  # Archivo sin encabezados
-                df.columns = ["appid", "hours_played"]  # Asignar nombres de columnas
+            # Verificar si el primer valor es una cadena que coincide con 'appid' (ignorando mayúsculas/minúsculas)
+            first_cell = df.iloc[0, 0]
+            if isinstance(first_cell, str) and first_cell.strip().lower() == "appid":
+                # Leer nuevamente con encabezados
+                df = pd.read_csv(file)
+            else:
+                # Asignar nombres de columnas manualmente
+                df.columns = ["appid", "hours_played"]
 
             # Convertir tipos de datos
             df["appid"] = df["appid"].astype(int)
@@ -142,119 +145,74 @@ def process_user_csvs(uploaded_files, base_data):
 
     if user_data.empty:
         st.warning("No valid data was processed. Using default dataset.")
-        return base_data
+        return pd.DataFrame()  # Retornar vacío para indicar que no hay datos de usuario
 
     # Agrupar y sumar horas jugadas
     user_data = user_data.groupby("appid")["hours_played"].sum().reset_index()
 
-    # Combinar con base_data
-    merged_data = base_data.merge(user_data, on="appid", how="left")
-    merged_data["hours_played"] = merged_data["hours_played"].fillna(0)
-
     # Filtrar juegos con horas jugadas > 0
-    filtered_data = merged_data[merged_data["hours_played"] > 0]
+    user_data = user_data[user_data["hours_played"] > 0]
 
-    return filtered_data
+    # Combinar con base_data para incluir información del juego
+    user_library = base_data.merge(user_data, on="appid")
+
+    return user_library
 
 # Función para obtener recomendaciones basadas en CSVs o similitud
-def get_recommendations(query, tfidf_matrix, data, by_description=False, user_based=False):
-    # Cargamos el feedback
-    feedback_data = pd.read_csv(feedback_file)
+def get_recommendations(user_library, tfidf_full_matrix, full_data, feedback_data):
+    recommendations = pd.DataFrame()
+    recommended_appids = set()
 
-    # === CASO 1: RECOMENDACIONES BASADAS EN LAS CSV DEL USUARIO ===
-    if user_based:
-        filtered_data = data[data["hours_played"] > 0]
-        if filtered_data.empty:
-            return pd.DataFrame()  # Si no hay datos válidos
+    # Seleccionar los 5 juegos con más horas jugadas
+    top_5 = user_library.sort_values(by="hours_played", ascending=False).head(5)
 
-        # 1) 5 juegos más jugados
-        top_5 = filtered_data.sort_values(by="hours_played", ascending=False).head(5)
+    for _, row in top_5.iterrows():
+        appid = row["appid"]
+        game_name = row["name"]
+        data_idx = full_data[full_data["appid"] == appid].index
+        if len(data_idx) == 0:
+            continue
+        data_idx = data_idx[0]
 
-        # 2) DataFrame final de recomendaciones y set para evitar duplicados
-        final_recommendations = pd.DataFrame()
-        recommended_appids = set()
+        # Calcular la similitud coseno con TF-IDF del juego actual
+        cosine_sim = linear_kernel(tfidf_full_matrix[data_idx], tfidf_full_matrix).flatten()
+        similar_indices = cosine_sim.argsort()[-100:][::-1]  # Obtener más para filtrar después
 
-        # 3) Para cada uno de los 5 juegos más jugados
-        for _, row in top_5.iterrows():
-            appid = row["appid"]
-            data_idx = data[data["appid"] == appid].index
-            if len(data_idx) == 0:
-                continue
-            data_idx = data_idx[0]
+        # Crear un DataFrame de recomendaciones
+        similar_games = full_data.iloc[similar_indices].copy()
 
-            # Calcular la similitud coseno con TF-IDF
-            cosine_sim = linear_kernel(tfidf_matrix[data_idx], tfidf_matrix).flatten()
-            similar_indices = cosine_sim.argsort()[-50:][::-1]
+        # Excluir los juegos en la biblioteca del usuario
+        similar_games = similar_games[~similar_games["appid"].isin(user_library["appid"])]
 
-            # Crear un DataFrame de recomendaciones
-            recommendations = data.iloc[similar_indices].copy()
-            recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
+        # Excluir ya recomendados
+        similar_games = similar_games[~similar_games["appid"].isin(recommended_appids)]
 
-            # Agregar columna "adjusted_score"
-            recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
+        # Ajustar el puntaje con feedback
+        similar_games["adjusted_score"] = cosine_sim[similar_indices[:len(similar_games)]]
 
-            # Ajustar el puntaje con feedback
-            for i, game in recommendations.iterrows():
-                game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
-                likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
-                dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
-                feedback_score = likes - dislikes
-                recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
+        for i, game in similar_games.iterrows():
+            game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
+            likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
+            dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
+            feedback_score = likes - dislikes
+            similar_games.at[i, "adjusted_score"] += feedback_score * 0.1
 
-            # Excluir el propio juego base y juegos ya recomendados
-            recommendations = recommendations[recommendations["appid"] != appid]
-            recommendations = recommendations[~recommendations["appid"].isin(recommended_appids)]
+        # Ordenar por puntaje ajustado
+        similar_games = similar_games.sort_values(by="adjusted_score", ascending=False)
 
-            # Ordenar por score ajustado
-            recommendations = recommendations.sort_values(by="adjusted_score", ascending=False)
+        # Tomar los primeros 2 juegos que no hayan sido recomendados aún
+        top_2 = similar_games.head(2)
+        recommendations = pd.concat([recommendations, top_2], ignore_index=True)
+        recommended_appids.update(top_2["appid"].tolist())
 
-            # Tomar los 2 primeros
-            top_2 = recommendations.head(2)
+        # Si ya hemos alcanzado 10 recomendaciones, salir del loop
+        if len(recommendations) >= 10:
+            break
 
-            # Agregar al DataFrame final
-            final_recommendations = pd.concat([final_recommendations, top_2], ignore_index=True)
+    # Asegurarse de tener como máximo 10 recomendaciones
+    recommendations = recommendations.head(10)
 
-            # Actualizar el set de appids recomendados
-            recommended_appids.update(top_2["appid"].tolist())
-
-        return final_recommendations
-
-    # === CASO 2: RECOMENDACIONES BASADAS EN NOMBRE O DESCRIPCIÓN ===
-    if by_description:
-        expanded_query = expand_query(query)
-        query_vector = tfidf.transform([expanded_query])
-        cosine_sim = linear_kernel(query_vector, tfidf_matrix).flatten()
-    else:
-        idx = data[data["name"].str.contains(query, case=False, na=False)].index
-        if len(idx) == 0:
-            return pd.DataFrame()
-        idx = idx[0]
-        cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-
-    similar_indices = cosine_sim.argsort()[-50:][::-1]
-
-    # Crear un DataFrame de recomendaciones con puntaje ajustado
-    recommendations = data.iloc[similar_indices].copy()
-    recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
-    recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
-
-    # Ajustar el puntaje usando feedback
-    for i, game in recommendations.iterrows():
-        game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
-        likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
-        dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
-        feedback_score = likes - dislikes
-        recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
-
-    # Ordenar por puntaje ajustado
-    recommendations = recommendations.sort_values(by="adjusted_score", ascending=False)
-
-    # Excluir el juego original de las recomendaciones (si coincide el nombre)
-    if "name" in recommendations.columns:
-        recommendations = recommendations[recommendations["name"] != query]
-
-    return recommendations.head(10)
-
+    return recommendations
 
 # Configurar la interfaz
 st.markdown(
@@ -299,14 +257,8 @@ st.markdown("<h1 style='text-align: center; margin-left: 15px;'>Stinder</h1>", u
 user_input_name = st.text_input("Enter a game name to get recommendations:")
 user_input_description = st.text_area("Enter a description to get recommendations:")
 
-# Por defecto, usar el DataFrame original:
-combined_data = data.copy()  ### CAMBIO
-combined_data.reset_index(drop=True, inplace=True)  ### CAMBIO
-
-tfidf, tfidf_matrix = process_text(combined_data)  ### CAMBIO
-
 # Subir múltiples archivos CSV
-uploaded_files = st.file_uploader("Enter up to 5 CSV Steam Librarys for recomendations:", 
+uploaded_files = st.file_uploader("Enter up to 5 CSV Steam Libraries for recommendations:", 
                                   type="csv", accept_multiple_files=True)
 
 # Validar el límite de archivos subidos
@@ -316,32 +268,24 @@ if uploaded_files and len(uploaded_files) > 5:
 
 # Procesar archivos subidos si existen
 if uploaded_files:
-    combined_data = process_user_csvs(uploaded_files, data)
-    combined_data.reset_index(drop=True, inplace=True)
-
-    # Volvemos a generar la matriz TF-IDF con combined_data
-    tfidf, tfidf_matrix = process_text(combined_data)  
-    st.success("Custom Steam libraries loaded successfully!")
+    user_library = process_user_csvs(uploaded_files, data)
+    if not user_library.empty:
+        st.success("Custom Steam libraries loaded successfully!")
+    else:
+        user_library = pd.DataFrame()
+        st.warning("No valid user data found. Using default dataset for recommendations.")
 else:
-    # Si no suben librerías, usar la dataset por defecto (ya está en combined_data) y la tfidf_matrix ya creada al inicio.
+    user_library = pd.DataFrame()  # Librería vacía si no se suben archivos
     st.info("No libraries provided. Using default dataset for name/description-based recommendations.")
 
-# Decidir si las recomendaciones serán user_based (solo si se han subido archivos).
-is_user_based = bool(uploaded_files and len(uploaded_files) > 0)
+# Decidir si las recomendaciones serán user_based (solo si se han subido archivos y hay datos válidos)
+is_user_based = not user_library.empty
 
-# Priorizar búsqueda por nombre si ambos están llenos
-search_by_name = bool(user_input_name.strip()) and not bool(user_input_description.strip())
-search_by_description = bool(user_input_description.strip()) and not bool(user_input_name.strip())
+# Procesar la matriz TF-IDF completa para el dataset completo
+tfidf_full, tfidf_full_matrix = process_text(data)
 
-# Si hay algo que buscar (o hay CSVs) calculamos recomendaciones:
-if user_input_name or user_input_description or is_user_based:
-    recommendations = get_recommendations(
-        query=user_input_name if search_by_name else user_input_description,
-        tfidf_matrix=tfidf_matrix,
-        data=combined_data,
-        by_description=search_by_description,
-        user_based=is_user_based
-    )
+# Cargar el feedback una sola vez
+feedback_data = pd.read_csv(feedback_file)
 
 # Inicializar lista de exclusión en la sesión
 if "excluded_games" not in st.session_state:
@@ -354,34 +298,123 @@ if "current_index" not in st.session_state:
 if "last_search" not in st.session_state:
     st.session_state["last_search"] = ""
 
+# Inputs de búsqueda
+query = ""
+by_description = False
+if not is_user_based:
+    # Priorizar búsqueda por nombre si ambos están llenos
+    search_by_name = bool(user_input_name.strip()) and not bool(user_input_description.strip())
+    search_by_description = bool(user_input_description.strip()) and not bool(user_input_name.strip())
+
+    if search_by_name:
+        query = user_input_name
+    elif search_by_description:
+        query = user_input_description
+else:
+    # En modo user_based, no se usa query
+    pass
+
 # Resetear el estado si la búsqueda cambia
-current_search = user_input_name if search_by_name else user_input_description
-if current_search != st.session_state["last_search"]:
+current_search = query
+if current_search != st.session_state["last_search"] or is_user_based != bool(st.session_state.get("is_user_based", False)):
     st.session_state["current_index"] = 0
     st.session_state["excluded_games"] = []
     st.session_state["last_search"] = current_search
+    st.session_state["is_user_based"] = is_user_based
 
 # Mostrar sugerencias mientras el usuario escribe si busca por nombre
-if search_by_name and user_input_name:
-    matching_games = combined_data[combined_data["name"].str.contains(user_input_name, case=False, na=False)]
+if not is_user_based and bool(user_input_name.strip()):
+    matching_games = data[data["name"].str.contains(user_input_name, case=False, na=False)]
     matching_game_names = matching_games["name"].tolist()
 
     if matching_game_names:
         selected_game = st.selectbox("Did you mean:", matching_game_names, key="game_selector")
         current_search = selected_game if selected_game else user_input_name
 
-# Mostrar recomendaciones
-if current_search or uploaded_files:
-    recommendations = get_recommendations(
-        query=current_search if not uploaded_files else "",
-        tfidf_matrix=tfidf_matrix,
-        data=combined_data,
-        by_description=search_by_description,
-        user_based=bool(uploaded_files)
-    )
+# Obtener recomendaciones
+if is_user_based or current_search:
+    if is_user_based:
+        recommendations = get_recommendations(
+            user_library=user_library,
+            tfidf_full_matrix=tfidf_full_matrix,
+            full_data=data,
+            feedback_data=feedback_data
+        )
+    else:
+        # Recomendaciones basadas en nombre o descripción
+        if search_by_description:
+            expanded_query = expand_query(query)
+            query_vector = tfidf_full.transform([expanded_query])
+            cosine_sim = linear_kernel(query_vector, tfidf_full_matrix).flatten()
+            
+            similar_indices = cosine_sim.argsort()[-50:][::-1]
 
-    # Filtrar juegos en la lista de exclusión
-    if "name" in recommendations.columns:
+            # Crear un DataFrame de recomendaciones con puntaje ajustado
+            recommendations = data.iloc[similar_indices].copy()
+            recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
+            recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
+
+            # Ajustar el puntaje usando feedback
+            for i, game in recommendations.iterrows():
+                game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
+                likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
+                dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
+                feedback_score = likes - dislikes
+                recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
+
+            # Ordenar por puntaje ajustado
+            recommendations = recommendations.sort_values(by="adjusted_score", ascending=False)
+
+            # Excluir el juego original de las recomendaciones (si coincide el nombre)
+            if "name" in recommendations.columns:
+                recommendations = recommendations[recommendations["name"] != query]
+
+            # Excluir juegos ya excluidos en la sesión
+            recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
+
+            # Tomar las primeras 10 recomendaciones
+            recommendations = recommendations.head(10)
+
+        else:
+            # Recomendaciones basadas en nombre
+            idx_series = data[data["name"].str.contains(query, case=False, na=False)].index
+            if len(idx_series) > 0:
+                idx = idx_series[0]
+                cosine_sim = linear_kernel(tfidf_full_matrix[idx], tfidf_full_matrix).flatten()
+
+                similar_indices = cosine_sim.argsort()[-50:][::-1]
+
+                # Crear un DataFrame de recomendaciones con puntaje ajustado
+                recommendations = data.iloc[similar_indices].copy()
+                recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
+                recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
+
+                # Ajustar el puntaje usando feedback
+                for i, game in recommendations.iterrows():
+                    game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
+                    likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
+                    dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
+                    feedback_score = likes - dislikes
+                    recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
+
+                # Ordenar por puntaje ajustado
+                recommendations = recommendations.sort_values(by="adjusted_score", ascending=False)
+
+                # Excluir el juego original de las recomendaciones (si coincide el nombre)
+                if "name" in recommendations.columns:
+                    recommendations = recommendations[recommendations["name"] != query]
+
+                # Excluir juegos ya excluidos en la sesión
+                recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
+
+                # Tomar las primeras 10 recomendaciones
+                recommendations = recommendations.head(10)
+            else:
+                # No se encontró ningún juego que coincida con el nombre
+                recommendations = pd.DataFrame()
+
+    # Filtrar juegos en la lista de exclusión (solo en modo no user_based)
+    if not is_user_based and "name" in recommendations.columns:
         recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
 
     if not recommendations.empty:
@@ -402,14 +435,14 @@ if current_search or uploaded_files:
                 st.session_state["excluded_games"].append(game["name"])
                 st.session_state["current_index"] += 1
 
-            # Buttons for like/dislike
+            # Buttons para like/dislike
             col1, col2 = st.columns(2)
             with col1:
                 st.button("❤", on_click=like_game, key=f"like-{current_index}", help="Like", use_container_width=True)
             with col2:
                 st.button("✖", on_click=dislike_game, key=f"dislike-{current_index}", help="Dislike", use_container_width=True)
 
-            # Text feedback with session state
+            # Text feedback con estado de sesión
             text_feedback_key = f"feedback-{current_index}"
             if text_feedback_key not in st.session_state:
                 st.session_state[text_feedback_key] = ""
@@ -419,7 +452,7 @@ if current_search or uploaded_files:
                 key=text_feedback_key,  # Bind to session state
             )
 
-            # Feedback button with callback
+            # Feedback button con callback
             def submit_feedback():
                 process_text_feedback(game["name"], st.session_state[text_feedback_key])
                 st.success("Thank you for your feedback!")
