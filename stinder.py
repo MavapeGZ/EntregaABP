@@ -270,12 +270,36 @@ if uploaded_files and len(uploaded_files) > 5:
 if uploaded_files:
     user_library = process_user_csvs(uploaded_files, data)
     if not user_library.empty:
+        st.markdown(
+            """
+            <style>
+            .stAlert {
+                background-color: green !important;
+                color: white !important;
+                border-radius: 10px !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         st.success("Custom Steam libraries loaded successfully!")
     else:
         user_library = pd.DataFrame()
         st.warning("No valid user data found. Using default dataset for recommendations.")
 else:
     user_library = pd.DataFrame()  # Librería vacía si no se suben archivos
+    st.markdown(
+        """
+        <style>
+        .stInfo {
+            background-color: #E63946 !important;
+            color: white !important;
+            border-radius: 10px !important; 
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     st.info("No libraries provided. Using default dataset for name/description-based recommendations.")
 
 # Decidir si las recomendaciones serán user_based (solo si se han subido archivos y hay datos válidos)
