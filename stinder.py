@@ -352,12 +352,19 @@ if not is_user_based and bool(user_input_name.strip()):
     matching_game_names = matching_games["name"].tolist()
 
     if matching_game_names:
+        # Mostrar un selectbox para que el usuario elija entre los juegos coincidentes
         selected_game = st.selectbox("Did you mean:", matching_game_names, key="game_selector")
-        current_search = selected_game if selected_game else user_input_name
+        
+        # Almacenar el juego seleccionado en la sesión
+        if selected_game and st.session_state.get("last_selected_game") != selected_game:
+            st.session_state["last_selected_game"] = selected_game
+            st.session_state["current_index"] = 0  # Reiniciar índice de recomendaciones
+            st.session_state["excluded_games"] = []  # Reiniciar juegos excluidos
 
 # Obtener recomendaciones
 if is_user_based or current_search:
     if is_user_based:
+        # Recomendaciones basadas en la biblioteca del usuario
         recommendations = get_recommendations(
             user_library=user_library,
             tfidf_full_matrix=tfidf_full_matrix,
@@ -365,20 +372,23 @@ if is_user_based or current_search:
             feedback_data=feedback_data
         )
     else:
-        # Recomendaciones basadas en nombre o descripción
+        # Recomendaciones basadas en el nombre o descripción
         if search_by_description:
+            # Búsqueda por descripción
             expanded_query = expand_query(query)
             query_vector = tfidf_full.transform([expanded_query])
             cosine_sim = linear_kernel(query_vector, tfidf_full_matrix).flatten()
             
             similar_indices = cosine_sim.argsort()[-50:][::-1]
 
-            # Crear un DataFrame de recomendaciones con puntaje ajustado
             recommendations = data.iloc[similar_indices].copy()
             recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
             recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
 
-            # Ajustar el puntaje usando feedback
+            # Excluir juegos ya excluidos
+            recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
+
+            # Ajustar puntaje con feedback
             for i, game in recommendations.iterrows():
                 game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
                 likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
@@ -386,18 +396,42 @@ if is_user_based or current_search:
                 feedback_score = likes - dislikes
                 recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
 
-            # Ordenar por puntaje ajustado
-            recommendations = recommendations.sort_values(by="adjusted_score", ascending=False)
+            # Ordenar y limitar a 10 recomendaciones
+            recommendations = recommendations.sort_values(by="adjusted_score", ascending=False).head(10)
 
-            # Excluir el juego original de las recomendaciones (si coincide el nombre)
-            if "name" in recommendations.columns:
-                recommendations = recommendations[recommendations["name"] != query]
+        elif "last_selected_game" in st.session_state and st.session_state["last_selected_game"]:
+            # Búsqueda por nombre
+            query = st.session_state["last_selected_game"]
+            idx_series = data[data["name"] == query].index
 
-            # Excluir juegos ya excluidos en la sesión
-            recommendations = recommendations[~recommendations["name"].isin(st.session_state["excluded_games"])]
+            if len(idx_series) > 0:
+                idx = idx_series[0]
+                cosine_sim = linear_kernel(tfidf_full_matrix[idx], tfidf_full_matrix).flatten()
 
-            # Tomar las primeras 10 recomendaciones
-            recommendations = recommendations.head(10)
+                similar_indices = cosine_sim.argsort()[-50:][::-1]
+
+                recommendations = data.iloc[similar_indices].copy()
+                recommendations = recommendations.drop_duplicates(subset=["appid"]).reset_index(drop=True)
+                recommendations["adjusted_score"] = cosine_sim[similar_indices[:len(recommendations)]]
+
+                # Excluir el juego seleccionado y juegos ya excluidos
+                recommendations = recommendations[
+                    (recommendations["name"] != query) &
+                    (~recommendations["name"].isin(st.session_state["excluded_games"]))
+                ]
+
+                # Ajustar puntaje con feedback
+                for i, game in recommendations.iterrows():
+                    game_feedback = feedback_data[feedback_data["appid"] == game["appid"]]
+                    likes = game_feedback[game_feedback["feedback_type"] == "like"]["count"].sum()
+                    dislikes = game_feedback[game_feedback["feedback_type"] == "dislike"]["count"].sum()
+                    feedback_score = likes - dislikes
+                    recommendations.at[i, "adjusted_score"] += feedback_score * 0.1
+
+                # Ordenar y limitar a 10 recomendaciones
+                recommendations = recommendations.sort_values(by="adjusted_score", ascending=False).head(10)
+
+
 
         else:
             # Recomendaciones basadas en nombre
