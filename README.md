@@ -48,6 +48,12 @@ En la parte superior derecha del archivo `.ipynb` tendremos que seleccionar el k
   4. Opción "Create Python Enviroment"
   5. Seleccionamos como base la versión de Python que ya tenemos instalada.
   6. Esperamos a que se cree el directorio `.venv`
+  7. Ejecutamos en la consola el siguiente comando:
+
+```bash
+   ./.venv/Scripts/activate
+   ```
+     
 
 ### **Entrega 3**
 
