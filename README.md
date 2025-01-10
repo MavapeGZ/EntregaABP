@@ -5,19 +5,14 @@ Este proyecto contiene la aplicación **Stinder**, recomendador basado en conten
 
 ## 📋 Contenidos
 
-- [Requisitos](#✅Requisitos)
-- [Instalación](#🚀-instalación)
-- [Configurar la aplicación](#⚙️-configurar-la-aplicación)
-- [Ejecutar la aplicación](#▶️-ejecutar-la-aplicación)
+- [Requisitos]
+- [Instalación]
+- [Configurar la aplicación]
+- [Ejecutar la aplicación]
 
-- [Title](#title)
-- [Big Title](#big-title)
-- [Medium Title](#medium-title) 
-- [Small Title](#small-title) 
+
 
 ## ✅Requisitos
-
-## Title
 
 - **Python**: [Instalar Python](https://www.python.org/downloads/)
 - **Visual Studio Code**: [Instalar VSCode](https://code.visualstudio.com/)
