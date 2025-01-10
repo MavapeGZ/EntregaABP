@@ -11,6 +11,8 @@ El código en este repositorio ha sido desarrollado por el grupo _VideogamesReco
 - Configurar la aplicación
 - Ejecutar la aplicación
 - [Entrega 3](#entrega-3)
+- [Entrega 4](#entrega-4)
+- [Entrega 5](#entrega-5)
 
 
 ## ✅Requisitos
@@ -71,6 +73,20 @@ En la parte superior derecha del archivo `.ipynb` tendremos que seleccionar el k
    pip install pandas nltk scikit-learn fuzzywuzzy[speedup] streamlit
    ```
 
+### **Entrega 5**
+
+#### **Instalación de liberías necesarias 📚**
+- **Pandas** (para la manipulación de datos)
+- **NLTK** (para procesamiento de texto)
+- **Scikit-learn** (para modelado y cálculos de distancias)
+- **FuzzyWuzzy** (para la coincidencia de cadenas)
+- **Streamlit** (para la interfaz gráfica)
+- **DeepL** (para la traducción de los textos)
+
+```bash
+   pip install pandas nltk scikit-learn fuzzywuzzy[speedup] streamlit deepl
+   ```
+
 
 ## ▶️ Ejecutar la aplicación
 ### **Entrega 3**
@@ -92,4 +108,4 @@ Para la ejecución de la aplicación sólo necesitamos dos archivos: `tratamient
 3. Una vez tenemos habilitada la interfaz gráfica podemos pedir recomendaciones del modo "Individual" de la aplicación. Si escribimos un juego se nos habilitará un desplegable con los juegos a los que podríamos hacer referencia que están dentro de nuestro dataset. Una vez hayamos escogido el juego al que hacíamos referencia podremos seguir el proceso de like/dislike de Stinder.
 4. Recibiremos 10 recomendaciones, a las que podemos darle like o dislike simplemente pulsando en el botón correspondiente (puede ser necesario pulsar varias veces para que cambie a la siguiente recomendación). 
 
-
+### **Entrega 5**
