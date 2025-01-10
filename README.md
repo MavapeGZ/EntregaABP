@@ -53,6 +53,7 @@ En la parte superior derecha del archivo `.ipynb` tendremos que seleccionar el k
 ```bash
    ./.venv/Scripts/activate
    ```
+> NOTA: Esto se hace para que cuando se instalen las librería se instalen solo para este proyecto. Cuando todas las librerías indicadas a continuación estén instaladas, será en este entorno virtual dónde se ejecute el fichero .py para arrancar la aplicación.
      
 
 ### **Entrega 3**
