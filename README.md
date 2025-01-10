@@ -1,23 +1,27 @@
 
 # Proyecto ABP - Stinder 
 
-Este proyecto contiene la aplicación **Stinder**, recomendador basado en contenidos desarrollado en Python Notebooks.
+Este proyecto contiene la aplicación **Stinder**, recomendador basado en contenidos desarrollado en Python Notebooks. 
+El código en este repositorio ha sido desarrollado por el grupo _VideogamesRecommender_ compuesto por Raúl Blanco Garrido, Anxo Rodríguez Castro, Anxo Rodríguez Méndez y Mario Vázquez Pérez
 
 ## 📋 Contenidos
 
-- [Requisitos]
-- [Instalación]
-- [Configurar la aplicación]
-- [Ejecutar la aplicación]
-
+- Requisitos
+- Instalación
+- Configurar la aplicación
+- Ejecutar la aplicación
+- [Entrega 3](#entrega-3)
 
 
 ## ✅Requisitos
 
 - **Python**: [Instalar Python](https://www.python.org/downloads/)
 - **Visual Studio Code**: [Instalar VSCode](https://code.visualstudio.com/)
+- **Streamlit**: [Documentación de Streamlit](https://streamlit.io/)
 
 ## 🚀 Instalación
+
+Una vez satisfechos los requisitos, sigue los siguientes pasos:
 
 **Clona este repositorio** en tu máquina local:
 
