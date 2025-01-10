@@ -5,7 +5,7 @@ Este proyecto contiene la aplicación **Stinder**, recomendador basado en conten
 
 ## 📋 Contenidos
 
-- [Requisitos](#requisitos)
+- [Requisitos](#✅Requisitos)
 - [Instalación](#🚀-instalación)
 - [Configurar la aplicación](#⚙️-configurar-la-aplicación)
 - [Ejecutar la aplicación](#▶️-ejecutar-la-aplicación)
@@ -15,7 +15,7 @@ Este proyecto contiene la aplicación **Stinder**, recomendador basado en conten
 - [Medium Title](#medium-title) 
 - [Small Title](#small-title) 
 
-## ✅ Requisitos
+## ✅Requisitos
 
 ## Title
 
