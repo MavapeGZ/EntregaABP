@@ -129,7 +129,7 @@ Para la ejecución de la aplicación sólo necesitamos dos archivos: `tratamient
 | Appid  | Hours played |
 | ------ | ------------ |
 | 14510  | 145  |
-| 14510  | 30  |
+| 14542  | 30  |
 
 El fichero `.csv` sólo deberá contener datos (_y no las cabceras appid y hours_played_)
 
