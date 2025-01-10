@@ -10,7 +10,7 @@ from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 import json
 import numpy as np
 
-# Set page configuration with custom title and favicon
+# Configurar la página de Streamlit
 st.set_page_config(
     page_title="Stinder - Steam Game Recommender",
     page_icon="./public/logo.png",
@@ -483,7 +483,7 @@ if is_user_based or current_search:
             st.image(game["header_image"], use_container_width=True)
             st.subheader(game["name"])
 
-            # Callback functions for button actions
+            # Funciones de callback para acciones de botones
             def like_game():
                 update_feedback(game["name"], "like")
                 st.session_state["current_index"] += 1
@@ -493,7 +493,7 @@ if is_user_based or current_search:
                 st.session_state["excluded_games"].append(game["name"])
                 st.session_state["current_index"] += 1
 
-            # Buttons para like/dislike
+            # Botones de like y dislike
             col1, col2 = st.columns(2)
             with col1:
                 st.button("❤", on_click=like_game, key=f"like-{current_index}", help="Like", use_container_width=True)
@@ -510,7 +510,7 @@ if is_user_based or current_search:
                 key=text_feedback_key,  # Bind to session state
             )
 
-            # Feedback button con callback
+            # Funciones de callback para acciones de botones
             def submit_feedback():
                 process_text_feedback(game["name"], st.session_state[text_feedback_key])
                 st.success("Thank you for your feedback!")
